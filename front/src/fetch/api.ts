@@ -8,8 +8,15 @@ export async function apiRequest<T>(
     ? window.localStorage.getItem("gamehub-token")
     : null;
 
+  const requestOptions: RequestInit = { ...options };
+  if (requestOptions.signal instanceof AbortSignal) {
+    requestOptions.signal = requestOptions.signal;
+  } else {
+    delete requestOptions.signal;
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
-    ...options,
+    ...requestOptions,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

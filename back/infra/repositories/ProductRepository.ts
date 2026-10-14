@@ -18,6 +18,54 @@ export interface ProductPage {
   limit: number;
 }
 
+export function buildProductQuery(filters: ProductFilters) {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters.search?.trim()) {
+    const search = `%${filters.search.trim()}%`;
+    values.push(search);
+    const parameter = `$${values.length}`;
+    conditions.push(`(LOWER(name) LIKE LOWER(${parameter}) OR LOWER(description) LIKE LOWER(${parameter}) OR LOWER(category) LIKE LOWER(${parameter}))`);
+  }
+
+  if (filters.category?.trim()) {
+    values.push(filters.category.trim());
+    const parameter = `$${values.length}`;
+    conditions.push(`LOWER(category) = LOWER(${parameter})`);
+  }
+
+  if (filters.inStock) conditions.push("stock > 0");
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const page = Number.isInteger(filters.page) && Number(filters.page) > 0 ? Number(filters.page) : 1;
+  const limit = Number.isInteger(filters.limit) && Number(filters.limit) > 0 ? Math.min(Number(filters.limit), 100) : 24;
+  const offset = (page - 1) * limit;
+  const orderBy = filters.sort === "price"
+    ? "price ASC, id ASC"
+    : filters.sort === "price_desc"
+      ? "price DESC, id ASC"
+      : "name ASC, id ASC";
+  const queryValues = [...values, limit, offset];
+  const limitParameter = `$${values.length + 1}`;
+  const offsetParameter = `$${values.length + 2}`;
+  const sql = `
+    WITH filtered AS (
+      SELECT id, name, description, category, price, stock
+      FROM products ${where}
+    ), total AS (
+      SELECT COUNT(*)::int AS total FROM filtered
+    )
+    SELECT f.id, f.name, f.description, f.category, f.price, f.stock, t.total
+    FROM filtered f
+    CROSS JOIN total t
+    ORDER BY ${orderBy}
+    LIMIT ${limitParameter} OFFSET ${offsetParameter}
+  `;
+
+  return { sql, values: queryValues, page, limit };
+}
+
 function mapProduct(row: Record<string, unknown>): Product {
   return {
     id: Number(row.id),
@@ -31,57 +79,16 @@ function mapProduct(row: Record<string, unknown>): Product {
 
 export class ProductRepository {
   async findAll(filters: ProductFilters): Promise<ProductPage> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-
-    if (filters.search) {
-      values.push(`%${filters.search}%`);
-      const parameter = `$${values.length}`;
-      conditions.push(`(name ILIKE ${parameter} OR description ILIKE ${parameter} OR category ILIKE ${parameter})`);
-    }
-
-    if (filters.category) {
-      values.push(filters.category);
-      conditions.push(`category = $${values.length}`);
-    }
-
-    if (filters.inStock) conditions.push("stock > 0");
-
-    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 24;
-    const offset = (page - 1) * limit;
-    const orderBy = filters.sort === "price"
-      ? "p.price ASC, p.id ASC"
-      : filters.sort === "price_desc"
-        ? "p.price DESC, p.id ASC"
-        : "p.name ASC, p.id ASC";
-    const queryValues = [...values, limit, offset];
-    const limitParameter = `$${values.length + 1}`;
-    const offsetParameter = `$${values.length + 2}`;
-    const sql = `
-      WITH filtered AS (
-        SELECT id, name, description, category, price, stock
-        FROM products ${where}
-      ), page AS (
-        SELECT * FROM filtered
-        ORDER BY ${orderBy.replaceAll("p.", "")}
-        LIMIT ${limitParameter} OFFSET ${offsetParameter}
-      ), total AS (
-        SELECT COUNT(*)::int AS value FROM filtered
-      )
-      SELECT p.id, p.name, p.description, p.category, p.price, p.stock, total.value AS total
-      FROM total LEFT JOIN page p ON TRUE
-      ORDER BY ${orderBy}`;
+    const { sql, values, page, limit } = buildProductQuery(filters);
 
     const startedAt = performance.now();
-    const result = await db.query(sql, queryValues);
+    const result = await db.query(sql, values);
     const duration = performance.now() - startedAt;
     if (duration > 250) {
       console.warn(`[SQL LENTO] catálogo: ${result.rows.length} linhas em ${duration.toFixed(2)} ms`);
     }
 
-    const items = result.rows.filter((row) => row.id !== null).map(mapProduct);
+    const items = result.rows.map(mapProduct);
     return {
       items,
       total: Number(result.rows[0]?.total ?? 0),

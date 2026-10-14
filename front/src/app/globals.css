@@ -62,9 +62,17 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px 
 .auth-card label { margin-top: 18px; }
 .auth-card .button { margin-top: 22px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-top: 30px; }
-.metric-card { display: grid; gap: 10px; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: white; }
+.metric-card { display: grid; gap: 10px; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: white; min-width: 0; }
 .metric-card span, .metric-card small { color: var(--muted); }
-.metric-card strong { font: 700 28px "Space Grotesk", sans-serif; }
+.metric-card strong {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font: 700 28px "Space Grotesk", sans-serif;
+  line-height: 1.1;
+}
+.metric-card small { display: block; line-height: 1.45; }
 .section-intro { margin-bottom: 0; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 28px; color: var(--muted); font-size: 14px; }
 .pagination .button { min-width: 110px; }

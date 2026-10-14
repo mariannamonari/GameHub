@@ -164,6 +164,19 @@ export function ProductsPage() {
           <input type="checkbox" checked={inStock} onChange={(event) => { setInStock(event.target.checked); setPage(1); }} />
           Somente disponíveis
         </label>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => {
+            setSearch("");
+            setCategory("");
+            setSort("name");
+            setInStock(false);
+            setPage(1);
+          }}
+        >
+          Limpar filtros
+        </button>
       </div>
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={loadProducts} /> : (
