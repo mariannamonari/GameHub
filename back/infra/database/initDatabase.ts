@@ -8,6 +8,9 @@ const TARGET_PRODUCT_COUNT = 60000;
 const demoProducts = [
   ["Console Nova X", "Console de nova geração com armazenamento rápido.", "Consoles", 3499.9, 8],
   ["Console Pocket", "Console portátil para jogar em qualquer lugar.", "Consoles", 1899.9, 4],
+  ["AAA - Produto de R$ 9,90", "Produto de teste para verificar a ordenação por preço.", "Acessórios", 9.9, 50],
+  ["BBB - Produto de R$ 100,00", "Produto de teste para verificar a ordenação por preço.", "Periféricos", 100, 50],
+  ["CCC - Produto de R$ 1.200,00", "Produto de teste para verificar a ordenação por preço.", "Hardware", 1200, 50],
   ["Aventura das Estrelas", "Jogo de aventura e exploração espacial.", "Jogos", 249.9, 15],
   ["Corrida Turbo", "Corridas arcade com pistas variadas.", "Jogos", 199.9, 3],
   ["Controle sem fio", "Controle ergonômico com conexão sem fio.", "Acessórios", 329.9, 12],
@@ -19,6 +22,8 @@ const demoProducts = [
 const productTemplates = [
   { name: "Console Nova", description: "Console de jogos com armazenamento de alta velocidade.", category: "Consoles", basePrice: 2299 },
   { name: "Console Portátil", description: "Console portátil para partidas em qualquer lugar.", category: "Consoles", basePrice: 1499 },
+  { name: "Placa Gamer", description: "Hardware para ampliar o desempenho do computador.", category: "Hardware", basePrice: 899 },
+  { name: "Mouse de Precisão", description: "Periférico gamer com sensor de alta precisão.", category: "Periféricos", basePrice: 189 },
   { name: "Controle Gamer", description: "Controle ergonômico com resposta rápida e conexão estável.", category: "Acessórios", basePrice: 249 },
   { name: "Headset Surround", description: "Headset gamer com microfone e áudio imersivo.", category: "Acessórios", basePrice: 319 },
   { name: "Teclado Mecânico", description: "Teclado mecânico compacto com iluminação configurável.", category: "Acessórios", basePrice: 399 },
@@ -77,7 +82,9 @@ async function seedProducts() {
 async function initialize() {
   const fs = await import("node:fs/promises");
   const schema = await fs.readFile(schemaPath, "utf8");
-  await db.query(schema);
+  const [tableDefinitions, indexDefinitions] = schema.split("-- INDEXES_START");
+  if (!indexDefinitions) throw new Error("Definições de índices ausentes no esquema do banco.");
+  await db.query(tableDefinitions);
 
   const passwordHash = await bcrypt.hash("123456", 10);
   await db.query(
@@ -91,6 +98,7 @@ async function initialize() {
   );
 
   await seedProducts();
+  await db.query(indexDefinitions);
   console.info(`Banco PostgreSQL inicializado: gamehub (${TARGET_PRODUCT_COUNT} produtos-alvo)`);
 }
 

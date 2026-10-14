@@ -7,6 +7,7 @@ import { apiRequest } from "@/fetch/api";
 interface DashboardDTO {
   totalProducts: number;
   lowStock: number;
+  availableProducts: number;
   inventoryValue: number;
   categories: number;
 }
@@ -34,6 +35,7 @@ export function DashboardPage() {
       <div className="metrics-grid">
         <MetricCard label="Produtos" value={String(data.totalProducts)} description="Itens cadastrados" />
         <MetricCard label="Estoque baixo" value={String(data.lowStock)} description="Cinco unidades ou menos" />
+        <MetricCard label="Disponíveis" value={String(data.availableProducts)} description="Com pelo menos uma unidade" />
         <MetricCard label="Categorias" value={String(data.categories)} description="Categorias disponíveis" />
         <MetricCard label="Valor em estoque" value={data.inventoryValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} description="Preço × quantidade" />
       </div>
